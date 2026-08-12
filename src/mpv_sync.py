@@ -12,6 +12,18 @@ import time
 import uuid
 from pathlib import Path
 
+STATUS_PATH = Path(os.environ.get("VIDEO_SYNC_STATUS", "/run/video-sync/status.json"))
+
+
+def report_status(role, state, **values):
+    payload = {"role": role, "state": state, "updated": time.time(), **values}
+    try:
+        temporary = STATUS_PATH.with_suffix(".tmp")
+        temporary.write_text(json.dumps(payload))
+        temporary.replace(STATUS_PATH)
+    except OSError:
+        pass
+
 
 class Mpv:
     def __init__(self, path):
@@ -123,6 +135,7 @@ def master(mpv, cfg, duration):
     sequence = 0
     last_status = 0.0
     print(f"MASTER session={session} clients={len(destinations)} start={epoch:.3f}", flush=True)
+    report_status("master", "waiting", session=session, clients=len(destinations))
     try:
         while True:
             now = time.time()
@@ -137,11 +150,14 @@ def master(mpv, cfg, duration):
                 mpv.set("pause", False)
                 started = True
             elif started:
-                correct(mpv, expected, duration,
-                        cfg.getfloat("sync", "soft_threshold"),
-                        cfg.getfloat("sync", "hard_threshold"),
-                        cfg.getfloat("sync", "slow_speed"),
-                        cfg.getfloat("sync", "fast_speed"))
+                error = correct(mpv, expected, duration,
+                                cfg.getfloat("sync", "soft_threshold"),
+                                cfg.getfloat("sync", "hard_threshold"),
+                                cfg.getfloat("sync", "slow_speed"),
+                                cfg.getfloat("sync", "fast_speed"))
+                report_status("master", "playing", session=session,
+                              drift_ms=round(error * 1000, 2) if error is not None else None,
+                              position=round(expected, 3))
             if time.monotonic() - last_status >= 5:
                 state = f"position={expected:.3f}" if started else f"starts_in={max(epoch-now, 0):.2f}"
                 print(f"MASTER {state} packets={sequence}", flush=True)
@@ -160,6 +176,7 @@ def client(mpv, cfg, duration):
     playing = False
     last_status = 0.0
     print(f"CLIENT listening port={cfg.getint('sync', 'port')}", flush=True)
+    report_status("client", "waiting")
     try:
         while True:
             try:
@@ -179,6 +196,7 @@ def client(mpv, cfg, duration):
                 mpv.set("pause", True)
                 mpv.set("speed", 1.0)
                 print(f"CLIENT session={session} master={address[0]}", flush=True)
+                report_status("client", "waiting", session=session, master=address[0])
             now = time.time()
             if now < epoch:
                 continue
@@ -193,6 +211,9 @@ def client(mpv, cfg, duration):
                             cfg.getfloat("sync", "hard_threshold"),
                             cfg.getfloat("sync", "slow_speed"),
                             cfg.getfloat("sync", "fast_speed"))
+            report_status("client", "playing", session=session, master=address[0],
+                          drift_ms=round(error * 1000, 2) if error is not None else None,
+                          position=round(expected, 3))
             if error is not None and time.monotonic() - last_status >= 5:
                 print(f"CLIENT position={expected:.3f} drift_ms={error*1000:+.1f}", flush=True)
                 last_status = time.monotonic()

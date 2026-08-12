@@ -7,6 +7,21 @@ if [ "${EUID}" -ne 0 ]; then
 fi
 
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$SOURCE_DIR/.env"
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo "Missing $ENV_FILE" >&2
+    echo "Create it with: cp .env.example .env" >&2
+    echo "Then set PI_SYNC_API_TOKEN to the same secret on every Pi." >&2
+    exit 1
+fi
+
+if ! grep -Eq '^PI_SYNC_API_TOKEN=[A-Za-z0-9._~-]{24,}$' "$ENV_FILE"; then
+    echo "PI_SYNC_API_TOKEN is missing or too short in $ENV_FILE." >&2
+    echo "Use 24+ letters, numbers, dots, underscores, tildes, or hyphens." >&2
+    echo "Generate one with: openssl rand -hex 32" >&2
+    exit 1
+fi
 
 install_runtime_dependencies() {
     local missing_packages=()
@@ -197,10 +212,16 @@ RUN_HOME="$(getent passwd "$RUN_USER" | cut -d: -f6)"
 install -d -m 0755 /opt/video-sync /etc/video-sync /var/lib/video-sync
 install -m 0755 "$SOURCE_DIR/src/mpv_sync.py" /opt/video-sync/mpv_sync.py
 install -m 0755 "$SOURCE_DIR/src/mpv_control.py" /opt/video-sync/mpv_control.py
+install -m 0755 "$SOURCE_DIR/src/web_agent.py" /opt/video-sync/web_agent.py
+install -m 0755 "$SOURCE_DIR/src/dashboard.py" /opt/video-sync/dashboard.py
 install -m 0755 "$SOURCE_DIR/bin/syncctl" /usr/local/bin/syncctl
 install -m 0755 "$SOURCE_DIR/bin/mpv-kiosk" /usr/local/bin/mpv-kiosk
 install -m 0644 "$SOURCE_DIR/config.ini" /etc/video-sync/config.ini
+install -m 0600 "$ENV_FILE" /etc/video-sync/pi-sync.env
+install -d -m 0755 /opt/video-sync/web
+install -m 0644 "$SOURCE_DIR/web/"* /opt/video-sync/web/
 chown "$RUN_USER:$RUN_GROUP" /var/lib/video-sync
+install -d -o "$RUN_USER" -g "$RUN_GROUP" -m 0755 "$RUN_HOME/mov"
 
 configure_chrony
 configure_login_profile
@@ -212,8 +233,29 @@ sed \
     "$SOURCE_DIR/systemd/video-sync.service.in" \
     > /etc/systemd/system/video-sync.service
 
+sed \
+    -e "s|@USER@|$RUN_USER|g" \
+    -e "s|@HOME@|$RUN_HOME|g" \
+    "$SOURCE_DIR/systemd/pi-sync-agent.service.in" \
+    > /etc/systemd/system/pi-sync-agent.service
+
+install -m 0644 "$SOURCE_DIR/systemd/pi-sync-dashboard.service" \
+    /etc/systemd/system/pi-sync-dashboard.service
+
 systemctl daemon-reload
 systemctl enable video-sync.service
+systemctl enable --now pi-sync-agent.service
+
+MASTER_DEVICE="$(config_value sync master_device)"
+MASTER_DEVICE="${MASTER_DEVICE%%.*}"
+if [ "${RUN_USER,,}" = "${MASTER_DEVICE,,}" ] || [ "$(hostname -s | tr '[:upper:]' '[:lower:]')" = "${MASTER_DEVICE,,}" ]; then
+    systemctl enable --now pi-sync-dashboard.service
+    DASHBOARD_PORT="$(config_value web dashboard_port)"
+    MASTER_ADDRESS="$(config_value clock master_address)"
+    echo "Dashboard: http://$MASTER_ADDRESS:$DASHBOARD_PORT"
+else
+    systemctl disable --now pi-sync-dashboard.service >/dev/null 2>&1 || true
+fi
 
 check_clock_sync
 

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pi Sync — Screen control</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="grain"></div>
+  <main>
+    <header>
+      <a class="brand" href="/" aria-label="Pi Sync home"><i></i><span>PI SYNC</span></a>
+      <div class="system-state"><span id="onlineCount">—</span><small>SCREENS ONLINE</small></div>
+      <button class="quiet" id="refreshButton">Refresh</button>
+    </header>
+
+    <section class="hero">
+      <div>
+        <p class="eyebrow">CCAM DISPLAY NETWORK</p>
+        <h1>Eleven screens.<br><em>One quiet control.</em></h1>
+      </div>
+      <div class="hero-status">
+        <span class="pulse"></span>
+        <p>Master clock<br><strong id="masterLabel">kiosk9 · checking</strong></p>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="Playback controls">
+      <label class="field video-field">
+        <span>VIDEO</span>
+        <select id="videoSelect"><option value="">Choose a video</option></select>
+      </label>
+      <button class="action primary" id="syncButton"><span>Start sync</span><b>↗</b></button>
+      <button class="action" id="localButton"><span>Play local</span><b>▶</b></button>
+      <button class="action danger" id="stopButton"><span>Stop</span><b>■</b></button>
+    </section>
+
+    <section class="fleet-section">
+      <div class="section-heading">
+        <div><p class="eyebrow">THE FLEET</p><h2>Displays</h2></div>
+        <label class="select-all"><input type="checkbox" id="selectAll"><span>Select all</span></label>
+      </div>
+      <div class="device-grid" id="deviceGrid" aria-live="polite"></div>
+    </section>
+
+    <section class="library-section">
+      <div class="section-heading">
+        <div><p class="eyebrow">MEDIA LIBRARY</p><h2>Bring a film in.</h2></div>
+        <p class="section-note">Upload once to kiosk9, then distribute verified copies.</p>
+      </div>
+      <div class="drop-zone" id="dropZone">
+        <input id="fileInput" type="file" accept="video/mp4,video/quicktime,video/x-matroska,video/webm" hidden>
+        <div><span class="upload-mark">＋</span><strong>Drop a video here</strong><small>MP4, MOV, MKV or WebM</small></div>
+        <button class="quiet light" id="chooseFile">Choose file</button>
+      </div>
+      <div class="transfer" id="transfer" hidden><div id="transferBar"></div><span id="transferText"></span></div>
+      <div class="library" id="library"></div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+  <dialog id="tokenDialog">
+    <form method="dialog" id="tokenForm">
+      <p class="eyebrow">LOCAL ACCESS</p>
+      <h2>Control token</h2>
+      <p>Enter the shared token from <code>config.ini</code>.</p>
+      <input id="tokenInput" type="password" autocomplete="current-password" required placeholder="Pi Sync token">
+      <button class="action primary" value="default">Open dashboard <b>↗</b></button>
+    </form>
+  </dialog>
+  <script src="/app.js"></script>
+</body>
+</html>

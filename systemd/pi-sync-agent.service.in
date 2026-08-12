@@ -1,0 +1,17 @@
+[Unit]
+Description=Pi Sync Web Control Agent
+After=network-online.target mpv-kiosk.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=VIDEO_SYNC_CONFIG=/etc/video-sync/config.ini
+Environment=VIDEO_SYNC_DEVICE=@USER@
+Environment=VIDEO_SYNC_HOME=@HOME@
+EnvironmentFile=/etc/video-sync/pi-sync.env
+ExecStart=/opt/video-sync/web_agent.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

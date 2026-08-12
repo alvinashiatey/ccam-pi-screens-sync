@@ -178,6 +178,64 @@ Copy `config.ini`, then change only:
 
 Do not put site-specific IP addresses or video paths into the program itself.
 
+## Web dashboard
+
+The installer runs a small authenticated control agent on every Pi. On kiosk9 it
+also starts the dashboard. Open it from another computer on the display network:
+
+```text
+http://10.74.0.187:8080
+```
+
+Before installing, create a private `.env` file. It is ignored by Git. Generate
+one shared random token and copy the same `.env` file to every Pi:
+
+```bash
+cp .env.example .env
+openssl rand -hex 32
+```
+
+Place the generated value in `.env`:
+
+```dotenv
+PI_SYNC_API_TOKEN=paste-the-generated-value-here
+```
+
+The public web settings remain in `config.ini`:
+
+```ini
+[web]
+agent_port = 5010
+dashboard_port = 8080
+upload_limit_gb = 20
+```
+
+During installation, `.env` is copied to `/etc/video-sync/pi-sync.env` with
+permissions `0600`, readable only by root. The installer refuses to continue if
+`.env` is missing or its token is shorter than 24 characters. Never commit or
+send this token through an insecure public channel.
+
+Because `.env` is intentionally absent from Git, copy it separately into the
+`~/pi-sync` directory on every Pi before running `sudo ./install.sh`.
+
+The dashboard can:
+
+- show online/offline, playback mode, disk space, clock state, and measured drift
+- upload a video to kiosk9 and copy checksum-verified versions to all clients
+- start synchronized playback on selected screens (kiosk9 is included automatically)
+- play a video locally on selected screens
+- stop selected screens
+
+Uploads are first written to a temporary file and moved into place only after the
+transfer completes. Distribution uses SHA-256 verification. A partial or corrupt
+copy is never promoted to the media library.
+
+This dashboard is intended for the trusted local display network. It uses a
+shared token but plain HTTP, so do not expose ports `5010` or `8080` to the public
+internet. If a firewall is enabled, allow TCP `5010` between kiosk9 and the Pis,
+TCP `8080` from operator computers to kiosk9, UDP `49999` for video sync, and UDP
+`123` for Chrony.
+
 ## Troubleshooting
 
 ```bash
