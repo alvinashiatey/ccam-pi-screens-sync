@@ -1,8 +1,8 @@
 # MPV Multi-Screen Sync
 
 A reusable Raspberry Pi video-wall project. Every Pi runs the same code and reads
-the same INI configuration. Its hostname determines whether it is the master or
-a client.
+the same INI configuration. Its service username or hostname determines whether
+it is the master or a client.
 
 ## What this replaces
 
@@ -56,7 +56,9 @@ sudo ./install.sh
 ```
 
 Run that same command on all Pis. The installer detects the current user and
-hostname and installs the service. It also checks for Python 3 and mpv. When
+hostname and installs the service. Since these Pis all use the hostname `ccam`,
+their distinct account names (`kiosk`, `kiosk2`, etc.) identify them. It also
+checks for Python 3 and mpv. When
 either is missing on Raspberry Pi OS, Debian, or Ubuntu, the installer updates
 the package information and installs it automatically. An internet connection is
 needed only when packages must be installed.
@@ -144,7 +146,7 @@ The active video selection is preserved.
 
 Copy `config.ini`, then change only:
 
-- `master_hostname`
+- `master_device`
 - `targets`
 - `default_video`
 - `clock.master_address`
@@ -157,6 +159,7 @@ Do not put site-specific IP addresses or video paths into the program itself.
 
 ```bash
 hostname
+whoami
 ls -l /tmp/mpv-sync.sock
 systemctl status video-sync
 journalctl -u video-sync -n 100 --no-pager

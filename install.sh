@@ -76,7 +76,7 @@ config_value() {
 }
 
 configure_chrony() {
-    local manage master_hostname master_address allow_network hostname chrony_main chrony_fragment
+    local manage master_device master_address allow_network hostname chrony_main chrony_fragment
 
     manage="$(config_value clock manage_chrony)"
     case "${manage,,}" in
@@ -87,8 +87,8 @@ configure_chrony() {
             ;;
     esac
 
-    master_hostname="$(config_value sync master_hostname)"
-    master_hostname="${master_hostname%%.*}"
+    master_device="$(config_value sync master_device)"
+    master_device="${master_device%%.*}"
     master_address="$(config_value clock master_address)"
     allow_network="$(config_value clock allow_network)"
     hostname="$(hostname -s)"
@@ -108,7 +108,7 @@ configure_chrony() {
         printf '\n# Load project-specific configuration fragments.\nconfdir /etc/chrony/conf.d\n' >> "$chrony_main"
     fi
 
-    if [ "${hostname,,}" = "${master_hostname,,}" ]; then
+    if [ "${hostname,,}" = "${master_device,,}" ] || [ "${RUN_USER,,}" = "${master_device,,}" ]; then
         {
             echo "# Managed by the pi-sync installer: master clock"
             echo "allow $allow_network"

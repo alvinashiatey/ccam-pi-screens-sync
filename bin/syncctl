@@ -12,7 +12,7 @@ usage() {
 case "${1:-}" in
     status) systemctl status "$SERVICE" --no-pager ;;
     start|stop|restart) sudo systemctl "$1" "$SERVICE" ;;
-    logs) journalctl -u "$SERVICE" -f ;;
+    logs) sudo journalctl -u "$SERVICE" -f ;;
     clock)
         chronyc tracking
         echo

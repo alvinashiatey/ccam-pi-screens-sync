@@ -4,6 +4,7 @@
 import configparser
 import json
 import os
+import pwd
 import signal
 import socket
 import sys
@@ -206,8 +207,10 @@ def main():
     if not cfg.read(config_path):
         raise RuntimeError(f"cannot read configuration: {config_path}")
     hostname = socket.gethostname().split(".")[0].lower()
-    master_hostname = cfg.get("sync", "master_hostname").split(".")[0].lower()
-    role = "master" if hostname == master_hostname else "client"
+    device_name = pwd.getpwuid(os.geteuid()).pw_name.lower()
+    legacy_master = cfg.get("sync", "master_hostname", fallback="kiosk9")
+    master_device = cfg.get("sync", "master_device", fallback=legacy_master).split(".")[0].lower()
+    role = "master" if master_device in (hostname, device_name) else "client"
     home = os.path.expanduser("~")
     configured = cfg.get("mpv", "default_video").replace("{home}", home).replace("{hostname}", hostname)
     video = active_path.read_text().strip() if active_path.exists() else configured
@@ -234,7 +237,7 @@ def main():
     signal.signal(signal.SIGINT, stop)
     try:
         duration = prepare(mpv, video)
-        print(f"START role={role} hostname={hostname} video={video} duration={duration:.3f}", flush=True)
+        print(f"START role={role} device={device_name} hostname={hostname} video={video} duration={duration:.3f}", flush=True)
         (master if role == "master" else client)(mpv, cfg, duration)
     finally:
         try:
