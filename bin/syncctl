@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SERVICE="video-sync"
+ACTIVE_FILE="/var/lib/video-sync/active-video"
+CONFIG_FILE="/etc/video-sync/config.ini"
+
+usage() {
+    echo "Usage: syncctl {status|start|stop|restart|logs|clock|set-video PATH|config}"
+}
+
+case "${1:-}" in
+    status) systemctl status "$SERVICE" --no-pager ;;
+    start|stop|restart) sudo systemctl "$1" "$SERVICE" ;;
+    logs) journalctl -u "$SERVICE" -f ;;
+    clock)
+        chronyc tracking
+        echo
+        chronyc sources -v
+        ;;
+    config) sudo "${EDITOR:-nano}" "$CONFIG_FILE" ;;
+    set-video)
+        [ "$#" -eq 2 ] || { usage; exit 2; }
+        video="$(realpath "$2")"
+        [ -f "$video" ] || { echo "Video not found: $video" >&2; exit 1; }
+        printf '%s\n' "$video" | sudo tee "$ACTIVE_FILE" >/dev/null
+        sudo systemctl restart "$SERVICE"
+        echo "Active video: $video"
+        ;;
+    *) usage; exit 2 ;;
+esac

@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+VIDEO_FOLDER="${VIDEO_SYNC_VIDEO_FOLDER:-$HOME/mov}"
+
+if [ "$#" -gt 0 ] && [ -f "$1" ]; then
+    VIDEO_FILE="$(realpath "$1")"
+else
+    shopt -s nullglob nocaseglob
+    video_files=("$VIDEO_FOLDER"/*.mp4 "$VIDEO_FOLDER"/*.mov)
+    shopt -u nocaseglob
+
+    if [ "${#video_files[@]}" -eq 0 ]; then
+        echo "No .mp4 or .mov video files found in $VIDEO_FOLDER" >&2
+        exit 1
+    fi
+
+    VIDEO_FILE="${video_files[0]}"
+fi
+
+exec mpv \
+    --fullscreen \
+    --loop-file=inf \
+    --no-terminal \
+    --no-osc \
+    --no-input-default-bindings \
+    --video-sync=display-resample \
+    --input-ipc-server=/tmp/mpv-sync.sock \
+    "$VIDEO_FILE"
