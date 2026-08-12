@@ -6,7 +6,7 @@ ACTIVE_FILE="/var/lib/video-sync/active-video"
 CONFIG_FILE="/etc/video-sync/config.ini"
 
 usage() {
-    echo "Usage: syncctl {status|start|stop|restart|logs|clock|set-video PATH|config}"
+    echo "Usage: syncctl {status|start|stop|restart|logs|clock|set-video PATH|local-video PATH|resume-sync|config}"
 }
 
 case "${1:-}" in
@@ -19,6 +19,18 @@ case "${1:-}" in
         chronyc sources -v
         ;;
     config) sudo "${EDITOR:-nano}" "$CONFIG_FILE" ;;
+    local-video)
+        [ "$#" -eq 2 ] || { usage; exit 2; }
+        video="$(realpath "$2")"
+        [ -f "$video" ] || { echo "Video not found: $video" >&2; exit 1; }
+        sudo systemctl stop "$SERVICE"
+        /opt/video-sync/mpv_control.py "$video"
+        echo "Synchronization stopped on this Pi. Run 'syncctl resume-sync' to rejoin."
+        ;;
+    resume-sync)
+        sudo systemctl restart "$SERVICE"
+        echo "This Pi has rejoined synchronization."
+        ;;
     set-video)
         [ "$#" -eq 2 ] || { usage; exit 2; }
         video="$(realpath "$2")"

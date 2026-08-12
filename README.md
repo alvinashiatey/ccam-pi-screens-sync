@@ -123,12 +123,35 @@ syncctl stop
 syncctl start
 syncctl clock
 syncctl set-video /home/kiosk9/mov/my-video.mp4
+syncctl local-video /home/kiosk10/mov/standalone-video.mp4
+syncctl resume-sync
 syncctl config
 ```
 
 `set-video` saves the chosen path outside Git, so pulling a code update does not
 change the active video. Run it on each Pi if their absolute video paths differ.
 If all Pis use the same path, the `default_video` value in `config.ini` is enough.
+
+### Play without synchronization
+
+To stop synchronization on one Pi and play a local looping video there:
+
+```bash
+syncctl local-video /home/kiosk10/mov/standalone-video.mp4
+```
+
+This affects only the Pi where the command is run. It stops `video-sync`, loads
+the selected file into the existing fullscreen mpv player, resets playback speed
+to normal, and starts playing immediately. The other Pis continue unchanged.
+
+To make that Pi rejoin the synchronized installation:
+
+```bash
+syncctl resume-sync
+```
+
+The Pi loads its saved synchronized video and, as a client, joins the current
+master session when it receives kiosk9's packets.
 
 ## Updating later
 

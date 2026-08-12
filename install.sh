@@ -196,6 +196,7 @@ RUN_HOME="$(getent passwd "$RUN_USER" | cut -d: -f6)"
 
 install -d -m 0755 /opt/video-sync /etc/video-sync /var/lib/video-sync
 install -m 0755 "$SOURCE_DIR/src/mpv_sync.py" /opt/video-sync/mpv_sync.py
+install -m 0755 "$SOURCE_DIR/src/mpv_control.py" /opt/video-sync/mpv_control.py
 install -m 0755 "$SOURCE_DIR/bin/syncctl" /usr/local/bin/syncctl
 install -m 0755 "$SOURCE_DIR/bin/mpv-kiosk" /usr/local/bin/mpv-kiosk
 install -m 0644 "$SOURCE_DIR/config.ini" /etc/video-sync/config.ini
